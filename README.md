@@ -1,6 +1,6 @@
 # CS5229 Advanced Computer Networks - Programming Assignment 2
 
-This repository hosts the distribution package Programming Assignment 2 for the NUS CS5229 Advanced Computer Networks course.
+This repository hosts the distribution package of Programming Assignment 2 for the NUS CS5229 Advanced Computer Networks course.
 
 ## Assignment Package
 ### Part A: Baby Steps in P4 (8%)

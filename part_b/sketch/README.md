@@ -76,7 +76,7 @@ You should do it from `h1`.
 An example are as follow:
 ```bash
 # this is from h1's xterm terminal
-root@p4# ./generate_traffic.p4 ./sample-trace/01-trace.csv
+root@p4# ./generate_traffic.py ./sample-trace/01-trace.csv
 ```
 The `generate_traffic.py` script will print out a checkpoint for every 100 packet replayed.
 
