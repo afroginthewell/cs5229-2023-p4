@@ -1,0 +1,32 @@
+{
+  "target": "bmv2",
+  "p4info": "build/sketch.p4.p4info.txt",
+  "bmv2_json": "build/sketch.json",
+  "table_entries": [ 
+    {
+      "table": "MyIngress.get_thresholds",
+      "match": { },
+      "action_name": "MyIngress.get_thresholds_action",
+      "action_params": {
+        "hh_threshold_param": 50,
+        "drop_threshold_param": 100
+      }
+    },
+    {
+      "table": "MyIngress.ipv4_forward",
+      "match": { "hdr.ipv4.dstAddr": "10.0.0.1" },
+      "action_name": "MyIngress.ipv4_forward_action",
+      "action_params": { 
+          "port" : 1
+      }
+    },
+    {
+      "table": "MyIngress.ipv4_forward",
+      "match": { "hdr.ipv4.dstAddr": "10.0.0.2" },
+      "action_name": "MyIngress.ipv4_forward_action",
+      "action_params": { 
+          "port" : 2
+      }
+    }
+  ]
+}

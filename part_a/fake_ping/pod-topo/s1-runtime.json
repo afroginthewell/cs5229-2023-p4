@@ -1,0 +1,13 @@
+{
+  "target": "bmv2",
+  "p4info": "build/fake_ping.p4.p4info.txt",
+  "bmv2_json": "build/fake_ping.json",
+  "table_entries": [ 
+    {
+      "table": "MyIngress.icmp_filter_table",
+      "match": { "hdr.ipv4.dstAddr": "12.12.12.12" },
+      "action_name": "MyIngress.drop",
+      "action_params": { }
+    }
+  ]
+}

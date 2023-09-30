@@ -1,0 +1,10 @@
+*.pyc
+*/build/*
+*/logs/*
+*/__pycache__/*
+*.p4i
+*.p4info.txt
+*.log
+*.pcap
+ss-log.txt
+*/out/*

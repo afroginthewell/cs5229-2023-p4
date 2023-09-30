@@ -1,0 +1,5 @@
+register_reset MyIngress.sketch_row0
+register_reset MyIngress.sketch_row1
+register_reset MyIngress.sketch_row2
+register_reset MyIngress.sketch_row3
+EOF
