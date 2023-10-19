@@ -50,6 +50,10 @@ header icmp_t {
 header udp_t {
     /* TODO: your code here */
     /* Hint: define UDP header */
+    bit<16> srcPort;
+    bit<16> dstPort;
+    bit<16> length;
+    bit<16> checksum;
 }
 
 header secret_t {
@@ -81,6 +85,31 @@ parser MyParser(packet_in packet,
     state start {
         /* TODO: your code here */
         /* Hint: implement your parser */
+        packet.extract(hdr.ethernet);
+        transition select(hdr.ethernet.etherType) {
+            TYPE_IPV4: parse_ipv4;
+            default: accept;
+        }   
+    }
+
+    state parse_ipv4 {
+        packet.extract(hdr.ipv4);
+        transition select(hdr.ipv4.protocol) {
+            17: parse_udp;
+            default: accept;
+        }
+    }
+
+    state parse_udp {
+        packet.extract(hdr.udp);
+        transition select(hdr.udp.dstPort, hdr.udp.srcPort) {
+            (TYPE_SECRET, TYPE_SECRET): parse_secret;
+            default: accept;
+        }
+    }
+
+    state parse_secret {
+        packet.extract(hdr.secret);
         transition accept;
     }
 }
@@ -112,6 +141,8 @@ control MyIngress(inout headers hdr,
 
     action ipv4_forward_action(egressSpec_t port) {
         standard_metadata.egress_spec = port;
+        // hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        
     }
 
     table ipv4_forward {
@@ -125,8 +156,12 @@ control MyIngress(inout headers hdr,
         default_action = drop();
     }
 
+    // action getCheckSum(bit<32>message, out bit<32> checksum){
+    //     checksum = hash(message);
+    // }
+
     apply {
-        if(hdr.secret.isValid()) {
+        if(hdr.secret.isValid() && hdr.ipv4.dstAddr == SWITCH_IP) {
             /* TODO: your code here */
             /* Hint 1: verify if the secret message is destined to the switch */
             /* Hint 2: there are two cases to handle -- DROPOFF, PICKUP */
@@ -134,8 +169,51 @@ control MyIngress(inout headers hdr,
             /* Hint 4: remember to "sanitize" your mailbox with 0xdeadbeef after every PICKUP */
             /* Hint 5: msg_checksums are important! */
             /* Hint 6: once everything is done, swap addresses, set port and reply to sender */
-        } 
-        ipv4_forward.apply();
+            bit<16> opCode = hdr.secret.opCode; 
+            bit<16> mailboxNum = hdr.secret.mailboxNum; 
+            bit<32> message = hdr.secret.message;   
+            bit<32> checksum;
+
+            if(opCode == SECRET_OPT.DROPOFF){
+                hash(checksum, HashAlgorithm.crc32, 32w0, {message}, (bit<32>)65536);
+                secret_mailboxes.write((bit<32>)mailboxNum, message);
+                msg_checksums.write((bit<32>)mailboxNum, checksum);
+                hdr.secret.opCode = SECRET_OPT.SUCCESS;    
+            }else if(opCode == SECRET_OPT.PICKUP){
+                bit<32> new_message;
+                bit<32> new_checksum;
+                bit<32> old_checksum;
+                secret_mailboxes.read(new_message, (bit<32>)mailboxNum);
+                msg_checksums.read(old_checksum, (bit<32>)mailboxNum);
+                hash(new_checksum, HashAlgorithm.crc32, 32w0, {new_message}, (bit<32>)65536);
+                if(new_checksum == old_checksum){
+                    secret_mailboxes.write((bit<32>)mailboxNum, 0xdeadbeef);
+                    msg_checksums.write((bit<32>)mailboxNum, 0xdeadbeef);
+                    hdr.secret.opCode = SECRET_OPT.SUCCESS;
+                    //new
+                    hdr.secret.message = new_message;
+                }else{
+                    hdr.secret.opCode = SECRET_OPT.FAILURE;
+                }
+            }else{
+                hdr.secret.opCode = SECRET_OPT.FAILURE;
+            }
+
+            hdr.udp.srcPort = TYPE_SECRET;
+            hdr.udp.dstPort = TYPE_SECRET;
+
+            ip4Addr_t tmpAddr = hdr.ipv4.srcAddr; 
+            hdr.ipv4.srcAddr = hdr.ipv4.dstAddr;
+            hdr.ipv4.dstAddr = tmpAddr;
+           
+            macAddr_t tmpMac = hdr.ethernet.srcAddr;
+            hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+            hdr.ethernet.dstAddr = tmpMac;
+
+            ipv4_forward.apply();
+        } else{
+            ipv4_forward.apply();
+        }
     }
 }
 
@@ -184,6 +262,10 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
         /* TODO: your code here */
+        packet.emit(hdr.ethernet);
+        packet.emit(hdr.ipv4);  
+        packet.emit(hdr.udp);   
+        packet.emit(hdr.secret);    
     }
 }
 
